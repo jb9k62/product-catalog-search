@@ -1,0 +1,44 @@
+{
+  "name": "search_and_discovery_miniapp",
+  "version": "1.0.0",
+  "description": "Search and discovery mini app",
+  "keywords": [
+    "search"
+  ],
+  "license": "UNLICENSED",
+  "private": true,
+  "author": "Jordan Hunt",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "node --watch server/src/index.ts",
+    "dev:client": "vite",
+    "build": "npm run typecheck && vite build",
+    "start": "node server/src/index.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p client/tsconfig.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "seed": "node scripts/generate-catalog.ts",
+    "seed:random": "node scripts/generate-catalog.ts --random",
+    "okf:validate": "node scripts/okf-view.mjs okf --validate",
+    "okf:view": "node scripts/okf-view.mjs okf"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.63.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.13.4",
+    "concurrently": "^10.0.5",
+    "prettier": "^3.9.7",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.0",
+    "yaml": "^2.6.1"
+  }
+}

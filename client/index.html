@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Search & Discovery</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Find items</h1>
+      <button id="theme-toggle" type="button" aria-pressed="false"></button>
+    </header>
+
+    <main>
+      <form id="search-form" role="search">
+        <input
+          type="search"
+          id="query"
+          name="q"
+          placeholder="Search items…"
+          aria-label="Search items"
+          autocomplete="off"
+        />
+        <select id="category" aria-label="Filter by category">
+          <option value="">All categories</option>
+        </select>
+        <select id="sort" aria-label="Sort by">
+          <option value="relevance">Relevance</option>
+          <option value="price">Price: low to high</option>
+          <option value="popularity">Popularity</option>
+        </select>
+      </form>
+
+      <!-- Options rendered into this by components/suggestions.ts. Hidden (via the
+           hidden attribute) until the typeahead has matches. -->
+      <ul id="suggestions" role="listbox" aria-label="Suggestions" hidden></ul>
+
+      <p id="status" role="status" aria-live="polite"></p>
+
+      <ul id="results" aria-label="Search results"></ul>
+
+      <!-- Static markup, updated in place by components/pagination.ts (keeps keyboard focus). -->
+      <nav id="pagination" aria-label="Pagination" hidden>
+        <button type="button" data-prev>Previous</button>
+        <span data-page-label></span>
+        <button type="button" data-next>Next</button>
+      </nav>
+    </main>
+
+    <template id="result-card-tpl">
+      <li class="result-card">
+        <div class="result-card__body">
+          <h2 data-name></h2>
+          <p class="result-card__meta">
+            <span data-category></span>
+            <span data-tags></span>
+          </p>
+        </div>
+        <div class="result-card__enrichment">
+          <strong data-price></strong>
+          <span data-availability></span>
+          <span data-delivery></span>
+        </div>
+      </li>
+    </template>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

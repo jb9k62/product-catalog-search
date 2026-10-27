@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.log
+.env
+data/catalog.random.json
+test-results/
+playwright-report/
+.playwright-cli/
+.vitest/
+okf/viz.html
+
+# Local model-run notes, not project documentation (see okf/app/ai-assistance.md)
+.gemma-run-log.md

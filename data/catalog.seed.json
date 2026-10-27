@@ -1,0 +1,290 @@
+[
+  {
+    "id": "bdd6a34e-0130-4296-bed5-469496864fc2",
+    "name": "Pro Camping Chair",
+    "category": "Outdoor",
+    "tags": ["weatherproof", "durable", "trail", "lightweight"],
+    "basePopularity": 54,
+    "basePrice": 1937.09
+  },
+  {
+    "id": "7b7de649-e39a-4b2b-be23-f2d73d785926",
+    "name": "Everyday Storage Container",
+    "category": "Home & Kitchen",
+    "tags": ["compact", "eco-friendly"],
+    "basePopularity": 97,
+    "basePrice": 1415.99
+  },
+  {
+    "id": "d3f0f0e8-f18f-48ab-87a9-e04fe7943759",
+    "name": "Select Hoodie",
+    "category": "Apparel",
+    "tags": ["quick-dry", "moisture-wicking", "breathable", "compression"],
+    "basePopularity": 69,
+    "basePrice": 571.59
+  },
+  {
+    "id": "de88cabc-e561-4907-a849-00d528c39108",
+    "name": "Signature Water Bottle",
+    "category": "Outdoor",
+    "tags": ["weatherproof", "lightweight", "trail", "durable"],
+    "basePopularity": 27,
+    "basePrice": 1373.02
+  },
+  {
+    "id": "d7674b83-e68e-491f-ba52-c98ec243b09c",
+    "name": "Premium Charging Cable",
+    "category": "Electronics",
+    "tags": ["wireless", "durable"],
+    "basePopularity": 40,
+    "basePrice": 2412.16
+  },
+  {
+    "id": "170e4a48-82fc-4fe9-be13-0564d5482c1f",
+    "name": "Essential T-Shirt",
+    "category": "Apparel",
+    "tags": ["breathable", "moisture-wicking", "quick-dry", "compression"],
+    "basePopularity": 7,
+    "basePrice": 1139.55
+  },
+  {
+    "id": "d25b2dd8-049f-4a4a-88c1-c8f5ae1eb14b",
+    "name": "Ultra Cutting Board",
+    "category": "Home & Kitchen",
+    "tags": ["eco-friendly", "durable", "compact"],
+    "basePopularity": 98,
+    "basePrice": 2909.75
+  },
+  {
+    "id": "abd373ff-0be2-49e0-ab4e-ff7dd5d09311",
+    "name": "Premium Sneaker",
+    "category": "Footwear",
+    "tags": ["lightweight", "waterproof"],
+    "basePopularity": 79,
+    "basePrice": 1024.38
+  },
+  {
+    "id": "ae930d0d-8fcf-45c6-87ad-fc66b3154430",
+    "name": "Select Jacket",
+    "category": "Apparel",
+    "tags": ["moisture-wicking", "breathable", "compression"],
+    "basePopularity": 79,
+    "basePrice": 359.29
+  },
+  {
+    "id": "fdca8165-4b71-43a1-bd77-9d5a94ecaddb",
+    "name": "Signature Smart Watch",
+    "category": "Electronics",
+    "tags": ["rechargeable", "wireless", "durable"],
+    "basePopularity": 88,
+    "basePrice": 184.81
+  },
+  {
+    "id": "951a8c8d-88e6-420c-b9b3-205966e58c69",
+    "name": "Select Wireless Earbuds",
+    "category": "Electronics",
+    "tags": ["durable", "compact", "wireless", "rechargeable"],
+    "basePopularity": 98,
+    "basePrice": 1528.59
+  },
+  {
+    "id": "497aeb30-4907-495c-811b-7b63dcb4951e",
+    "name": "Select Coffee Mug",
+    "category": "Home & Kitchen",
+    "tags": ["eco-friendly", "durable"],
+    "basePopularity": 73,
+    "basePrice": 2439.03
+  },
+  {
+    "id": "6ef792f3-fa98-4323-82c5-0feef26cb2d3",
+    "name": "Ultra Sleeping Bag",
+    "category": "Outdoor",
+    "tags": ["weatherproof", "durable", "trail"],
+    "basePopularity": 13,
+    "basePrice": 2677.37
+  },
+  {
+    "id": "73b40a2f-fe50-4e6f-afd4-6d528eb919f2",
+    "name": "Original Leggings",
+    "category": "Apparel",
+    "tags": ["quick-dry", "breathable", "moisture-wicking", "compression"],
+    "basePopularity": 81,
+    "basePrice": 2449.33
+  },
+  {
+    "id": "ccf65c5e-d6cc-41e8-ad5e-60e15ff9a745",
+    "name": "Deluxe Sneaker",
+    "category": "Footwear",
+    "tags": ["cushioned", "breathable", "waterproof", "trail"],
+    "basePopularity": 44,
+    "basePrice": 2674.35
+  },
+  {
+    "id": "d7f2dccd-ca20-4e9c-9712-a637194c4701",
+    "name": "Pro Leggings",
+    "category": "Apparel",
+    "tags": ["quick-dry", "compression"],
+    "basePopularity": 78,
+    "basePrice": 214.89
+  },
+  {
+    "id": "b3e33079-1c78-4768-a22d-f54a602ba033",
+    "name": "Classic T-Shirt",
+    "category": "Apparel",
+    "tags": ["compression", "quick-dry", "moisture-wicking", "breathable"],
+    "basePopularity": 10,
+    "basePrice": 805.2
+  },
+  {
+    "id": "edfb96ed-006c-4f29-b6fd-d7640ddff8cf",
+    "name": "Everyday Sleeping Bag",
+    "category": "Outdoor",
+    "tags": ["lightweight", "weatherproof"],
+    "basePopularity": 23,
+    "basePrice": 2047.93
+  },
+  {
+    "id": "e8ce5136-dd08-4631-85f5-8b5ff4744098",
+    "name": "Everyday Charging Cable",
+    "category": "Electronics",
+    "tags": ["rechargeable", "wireless"],
+    "basePopularity": 99,
+    "basePrice": 801.96
+  },
+  {
+    "id": "713f279b-8058-4150-a162-9bc321ab0e08",
+    "name": "Original Water Bottle",
+    "category": "Outdoor",
+    "tags": ["weatherproof", "trail", "durable", "lightweight"],
+    "basePopularity": 90,
+    "basePrice": 1688.02
+  },
+  {
+    "id": "8da21a09-f96a-478f-86fe-31101a15d0d4",
+    "name": "Signature Storage Container",
+    "category": "Home & Kitchen",
+    "tags": ["compact", "durable", "eco-friendly"],
+    "basePopularity": 28,
+    "basePrice": 614.57
+  },
+  {
+    "id": "5a312222-a25e-47a2-8302-42117358b0ca",
+    "name": "Original Kitchen Towel",
+    "category": "Home & Kitchen",
+    "tags": ["durable", "compact"],
+    "basePopularity": 75,
+    "basePrice": 635.11
+  },
+  {
+    "id": "1d95145b-ae71-4bc8-8c78-6010a58e36c3",
+    "name": "Everyday Backpack",
+    "category": "Outdoor",
+    "tags": ["trail", "durable", "lightweight", "weatherproof"],
+    "basePopularity": 81,
+    "basePrice": 641.05
+  },
+  {
+    "id": "31285d63-9b22-40ba-97dc-9d31408e017e",
+    "name": "Ultra Running Shoe",
+    "category": "Footwear",
+    "tags": ["cushioned", "breathable"],
+    "basePopularity": 0,
+    "basePrice": 2860.26
+  },
+  {
+    "id": "5f931232-242e-4186-9f16-fdd42ae894c2",
+    "name": "Pro Jacket",
+    "category": "Apparel",
+    "tags": ["moisture-wicking", "breathable"],
+    "basePopularity": 29,
+    "basePrice": 1785.59
+  },
+  {
+    "id": "55beeca1-2e90-41a0-928b-a3b35bada915",
+    "name": "Everyday Trail Shoe",
+    "category": "Footwear",
+    "tags": ["cushioned", "lightweight", "breathable"],
+    "basePopularity": 50,
+    "basePrice": 1773.02
+  },
+  {
+    "id": "23bbab84-52e9-467f-a298-90de9beb2996",
+    "name": "Select Kitchen Towel",
+    "category": "Home & Kitchen",
+    "tags": ["eco-friendly", "durable", "compact"],
+    "basePopularity": 84,
+    "basePrice": 461.52
+  },
+  {
+    "id": "10fdb622-48ba-44fb-9896-35c0100db717",
+    "name": "Essential Power Bank",
+    "category": "Electronics",
+    "tags": ["wireless", "rechargeable", "compact"],
+    "basePopularity": 37,
+    "basePrice": 1915
+  },
+  {
+    "id": "5fb9220d-9b0f-4d32-a248-6492457c3890",
+    "name": "Essential Running Shoe",
+    "category": "Footwear",
+    "tags": ["lightweight", "trail", "cushioned", "breathable"],
+    "basePopularity": 69,
+    "basePrice": 1376.44
+  },
+  {
+    "id": "ac3b5aa8-1d52-409a-b083-a2b6e251ee4a",
+    "name": "Ultra Coffee Mug",
+    "category": "Home & Kitchen",
+    "tags": ["durable", "compact"],
+    "basePopularity": 90,
+    "basePrice": 1936
+  },
+  {
+    "id": "ed89605c-0568-4e55-bb73-72276e59a0a2",
+    "name": "Essential Sandal",
+    "category": "Footwear",
+    "tags": ["lightweight", "breathable"],
+    "basePopularity": 60,
+    "basePrice": 294.52
+  },
+  {
+    "id": "d7a8b103-2d3f-452c-aa78-b3ffa3a1047d",
+    "name": "Deluxe Power Bank",
+    "category": "Electronics",
+    "tags": ["wireless", "compact", "rechargeable"],
+    "basePopularity": 87,
+    "basePrice": 1778.16
+  },
+  {
+    "id": "2780521f-5c4a-4c97-865e-df1bf21b9d2c",
+    "name": "Essential Backpack",
+    "category": "Outdoor",
+    "tags": ["weatherproof", "trail", "lightweight", "durable"],
+    "basePopularity": 88,
+    "basePrice": 1238.09
+  },
+  {
+    "id": "357957b0-4be8-4817-a834-605351e9ac71",
+    "name": "Ultra Sneaker",
+    "category": "Footwear",
+    "tags": ["cushioned", "waterproof", "trail"],
+    "basePopularity": 65,
+    "basePrice": 1755.26
+  },
+  {
+    "id": "b2c0057c-a74f-4672-bcb3-1aa4f26f6a64",
+    "name": "Pro Trail Shoe",
+    "category": "Footwear",
+    "tags": ["trail", "waterproof"],
+    "basePopularity": 65,
+    "basePrice": 1168.73
+  },
+  {
+    "id": "42df8240-e194-48ad-a302-ed99a2e66802",
+    "name": "Classic Smart Watch",
+    "category": "Electronics",
+    "tags": ["wireless", "rechargeable"],
+    "basePopularity": 35,
+    "basePrice": 2185.24
+  }
+]

@@ -1,0 +1,248 @@
+:root {
+  /* :root matches the document's <html> element, where global theme variables live. */
+  color-scheme: light;
+  --border: #d0d0d0;
+  --muted: #666;
+  --accent: #1a5fb4;
+  --error: #c62828;
+  --degraded-bg: #fff8e1;
+  --surface: #fff;
+  --text: #222;
+  font-family: system-ui, sans-serif;
+
+  /* Only the results list takes part in view transitions. By default the whole
+     page is snapshotted and cross-faded, including the search input the user
+     is typing into. */
+  view-transition-name: none;
+}
+
+/* The cross-fade overlay would catch every click while it runs. The real page
+   underneath is already in its new state, so let clicks through to it. */
+::view-transition {
+  pointer-events: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 1rem;
+  max-width: 60rem;
+  margin-inline: auto;
+  background: var(--surface);
+  color: var(--text);
+}
+
+header h1 {
+  font-size: 1.5rem;
+  margin-block-end: 1rem;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+#theme-toggle {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+#search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 1rem;
+}
+
+#query {
+  flex: 1 1 16rem;
+  anchor-name: --query;
+}
+
+#search-form input,
+#search-form select {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  font-size: 1rem;
+}
+
+/* Typeahead listbox, anchored under the search input. Taken out of the page
+   flow, so opening it covers the results instead of pushing them down. Theme
+   colours come from the same variables as the rest of the page, so both themes
+   get it for free. */
+#suggestions {
+  position: absolute;
+  position-anchor: --query;
+  top: anchor(bottom);
+  left: anchor(left);
+  width: anchor-size(width);
+  z-index: 1;
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--surface);
+  box-shadow: 0 0.25rem 0.5rem rgb(0 0 0 / 0.15);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+/* An author `display` rule beats the browser's [hidden] default, so restate it. */
+#suggestions[hidden] {
+  display: none;
+}
+
+#suggestions [role="option"] {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+/* No :hover rule: the pointer moves this same highlight (see
+   components/suggestions.ts), so there is only ever one. */
+#suggestions [role="option"].is-highlighted {
+  background: var(--accent);
+  color: #fff;
+}
+
+#status {
+  min-height: 1.5rem;
+  color: var(--muted);
+}
+
+#status[data-state="error"] {
+  color: var(--error);
+}
+
+#results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+  view-transition-name: results;
+  transition: opacity 0.15s;
+}
+
+/* Dim stale results while a search is in flight. The delay stops fast
+   responses (most of them) from flickering. */
+#results[aria-busy="true"] {
+  opacity: 0.6;
+  transition-delay: 0.15s;
+}
+
+.result-card {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.result-card.is-degraded {
+  background: var(--degraded-bg);
+}
+
+.result-card__body h2 {
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+}
+
+.result-card__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* A dot between category and tags, so "Footwear" and "trail, waterproof" don't
+   read as one phrase. The space before the dot comes from the markup, so only
+   add one after it. The empty alt text after "/" keeps screen readers from reading it out. */
+.result-card__meta [data-tags]:not(:empty)::before {
+  content: "· " / "";
+}
+
+.result-card__enrichment {
+  text-align: right;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+/* Price, availability, and delivery each get their own line. */
+.result-card__enrichment > * {
+  display: block;
+}
+
+.result-card__enrichment strong {
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+#pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block-start: 1rem;
+}
+
+/* An author `display` rule beats the browser's built-in [hidden] style, so restate it. */
+#pagination[hidden] {
+  display: none;
+}
+
+#pagination button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: none;
+  cursor: pointer;
+}
+
+#pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --border: #444;
+    --muted: #aaa;
+    --accent: #6ea8fe;
+    --error: #ff8a80;
+    --degraded-bg: #332b00;
+    --surface: #121212;
+    --text: #eee;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --border: #444;
+  --muted: #aaa;
+  --accent: #6ea8fe;
+  --error: #ff8a80;
+  --degraded-bg: #332b00;
+  --surface: #121212;
+  --text: #eee;
+}

@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search &amp; Discovery Architecture — an explanation</title>
+<script>
+  // Set the theme before first paint, so a dark-theme reader never sees a light flash.
+  let explainTheme = null;
+  try { explainTheme = localStorage.getItem("explain-theme"); } catch {}
+  document.documentElement.dataset.theme = explainTheme === "dark" || explainTheme === "light"
+    ? explainTheme
+    : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+</script>
+<!-- Pinned with subresource integrity: a pinned version on a CDN is immutable,
+     so a changed file means something is wrong and the script should not run.
+     Same pins as the okf-bootstrap viewer, so both accept one Mermaid dialect. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js" integrity="sha384-EOXBFmc3gx5mb+vn0vPvvGqACToJD24hhacX5Yx+8NUUQrHIle/Qi5Bg9o3zKwW2" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.2/highlight.min.js" integrity="sha384-pZ4gLQJIEk/VKnGk59xUSQK8Ne/erZQR9cpnPXPLB9iN1tXsVkRVfHYGdFYrSkv1" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #334155;
+  --text-muted: #64748b;
+  --heading: #0f172a;
+  --accent: #2563eb;
+  --code-bg: #eef2f7;
+  --pre-bg: #f8fafc;
+  --code-keyword: #be185d;
+  --code-string: #15803d;
+  --code-number: #b45309;
+  --code-title: #1d4ed8;
+  --code-attr: #b45309;
+  --code-builtin: #0e7490;
+  --code-comment: #64748b;
+  --code-meta: #7c3aed;
+  --good: #059669;
+  --bad: #dc2626;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0b1120;
+  --surface: #0f172a;
+  --surface-2: #1e293b;
+  --border: #1e293b;
+  --border-strong: #334155;
+  --text: #cbd5e1;
+  --text-muted: #94a3b8;
+  --heading: #f1f5f9;
+  --accent: #60a5fa;
+  --code-bg: #1e293b;
+  --pre-bg: #111827;
+  --code-keyword: #f472b6;
+  --code-string: #4ade80;
+  --code-number: #fbbf24;
+  --code-title: #60a5fa;
+  --code-attr: #fbbf24;
+  --code-builtin: #22d3ee;
+  --code-comment: #94a3b8;
+  --code-meta: #c4b5fd;
+  --good: #34d399;
+  --bad: #f87171;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.7 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+button:hover { background: var(--surface-2); }
+button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Top bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand strong {
+  font-size: 15px;
+  color: var(--heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brand span { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#score { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* Layout: table of contents rail + reading column */
+.layout {
+  display: flex;
+  gap: 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 96px;
+  align-items: flex-start;
+}
+#toc {
+  position: sticky;
+  top: 80px;
+  flex: 0 0 230px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+.toc-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+#toc ul { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.5; }
+#toc li { margin: 0 0 4px; }
+#toc li.toc-h3 { padding-left: 14px; }
+#toc a {
+  color: var(--text-muted);
+  text-decoration: none;
+  display: block;
+  padding: 2px 6px;
+  border-left: 2px solid transparent;
+}
+#toc a:hover { color: var(--heading); }
+#toc a.active { color: var(--accent); border-left-color: var(--accent); }
+
+#toc-details { max-width: 48rem; margin: 0 auto; padding: 0 20px; }
+#toc-details summary { cursor: pointer; color: var(--text-muted); font-size: 14px; }
+#toc-details ul { list-style: none; margin: 8px 0 0; padding: 0 0 0 8px; font-size: 14px; line-height: 1.6; }
+#toc-details li.toc-h3 { padding-left: 14px; }
+#toc-details a { color: var(--text-muted); text-decoration: none; }
+#toc-details a:hover { color: var(--heading); }
+
+/* Reading column */
+#content { flex: 1; min-width: 0; max-width: 48rem; }
+.page-title {
+  margin: 0 0 8px;
+  font-size: 34px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--heading);
+}
+.lead { margin: 0 0 24px; font-size: 18px; line-height: 1.6; color: var(--text-muted); }
+
+/* Rendered markdown */
+.prose > :first-child { margin-top: 0; }
+.prose h2 { margin: 2.2em 0 0.6em; font-size: 24px; line-height: 1.3; color: var(--heading); }
+.prose h3 { margin: 1.8em 0 0.5em; font-size: 17px; color: var(--heading); }
+.prose p, .prose ul, .prose ol { margin: 0 0 1em; }
+.prose ul, .prose ol { padding-left: 1.4em; }
+.prose li + li { margin-top: 0.35em; }
+.prose strong { color: var(--heading); }
+.prose a { color: var(--accent); text-decoration: none; }
+.prose a:hover { text-decoration: underline; }
+code { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; }
+.prose code { font-size: 0.85em; padding: 0.15em 0.4em; border-radius: 4px; background: var(--code-bg); }
+.prose pre {
+  margin: 0 0 1.3em;
+  padding: 14px 18px;
+  overflow-x: auto;
+  background: var(--pre-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.prose pre code { padding: 0; background: none; font-size: 13px; line-height: 1.6; }
+.hljs { background: none; color: var(--text); }
+.hljs-comment, .hljs-quote { color: var(--code-comment); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-type, .hljs-tag, .hljs-operator { color: var(--code-keyword); }
+.hljs-string, .hljs-doctag, .hljs-regexp, .hljs-addition { color: var(--code-string); }
+.hljs-number { color: var(--code-number); }
+.hljs-title, .hljs-title.function_, .hljs-title.class_, .hljs-section, .hljs-selector-id { color: var(--code-title); font-weight: 600; }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable, .hljs-property, .hljs-params { color: var(--code-attr); }
+.hljs-built_in, .hljs-builtin-name, .hljs-name, .hljs-class { color: var(--code-builtin); }
+.hljs-symbol, .hljs-bullet, .hljs-link, .hljs-meta { color: var(--code-meta); }
+.hljs-deletion { color: #b91c1c; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
+.table-wrap { margin: 0 0 1.3em; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+.prose table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55; }
+.prose th, .prose td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.prose th { background: var(--surface-2); font-weight: 600; color: var(--heading); white-space: nowrap; }
+.prose tr:last-child td { border-bottom: 0; }
+.prose blockquote { margin: 0 0 1em; padding: 2px 16px; border-left: 3px solid var(--border-strong); color: var(--text-muted); }
+.prose hr { border: 0; border-top: 1px solid var(--border); margin: 2em 0; }
+
+/* Mermaid figures */
+.prose .mermaid {
+  margin: 0 0 1.3em;
+  padding: 20px;
+  overflow-x: auto;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.prose .mermaid svg { max-width: 100%; height: auto; }
+.prose .mermaid[data-state="error"] { text-align: left; border-color: #fca5a5; }
+.prose .mermaid[data-state="error"] p { color: #b91c1c; font-size: 14px; }
+
+/* Callouts (GitHub-style alert blockquotes) */
+.callout {
+  margin: 0 0 1.3em;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.callout-title { font-weight: 650; color: var(--heading); margin: 0 0 4px; }
+.callout > :last-child { margin-bottom: 0; }
+.callout p, .callout ul, .callout ol { margin-bottom: 0.6em; }
+.callout-note { border-left-color: #2563eb; }
+.callout-tip { border-left-color: #059669; }
+.callout-important { border-left-color: #7c3aed; }
+.callout-warning { border-left-color: #d97706; }
+.callout-caution { border-left-color: #e11d48; }
+.callout-definition { border-left-color: #0891b2; }
+.callout-example { border-left-color: #059669; }
+.callout-edge-case { border-left-color: #ca8a04; }
+:root[data-theme="dark"] .callout-note { border-left-color: #60a5fa; }
+:root[data-theme="dark"] .callout-tip,
+:root[data-theme="dark"] .callout-example { border-left-color: #34d399; }
+:root[data-theme="dark"] .callout-important { border-left-color: #c4b5fd; }
+:root[data-theme="dark"] .callout-warning { border-left-color: #fbbf24; }
+:root[data-theme="dark"] .callout-caution { border-left-color: #f87171; }
+:root[data-theme="dark"] .callout-definition { border-left-color: #22d3ee; }
+:root[data-theme="dark"] .callout-edge-case { border-left-color: #fcd34d; }
+
+/* Quiz */
+.quiz-card {
+  margin: 0 0 1.4em;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.quiz-q { display: flex; gap: 12px; margin: 0 0 12px; }
+.quiz-num {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--accent);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+}
+.quiz-text { font-weight: 600; color: var(--heading); }
+.quiz-options { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.quiz-options button {
+  width: 100%;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 9px 12px;
+  background: var(--surface);
+}
+.quiz-options button:disabled { cursor: default; }
+.quiz-options button.is-correct {
+  border-color: var(--good);
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 8%, var(--surface));
+}
+.quiz-options button.is-wrong {
+  border-color: var(--bad);
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 8%, var(--surface));
+}
+.quiz-feedback {
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 0 0 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.quiz-feedback.is-correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 8%, var(--surface)); }
+.quiz-feedback.is-wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+.quiz-feedback .fb-label { font-weight: 650; color: var(--heading); }
+
+@media (max-width: 900px) {
+  .layout { display: block; padding-top: 20px; }
+  #toc { display: none; }
+  #toc-details { display: block; margin-bottom: 16px; }
+  #content { max-width: 48rem; }
+  .page-title { font-size: 28px; }
+}
+@media (min-width: 901px) {
+  #toc-details { display: none; }
+}
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <strong id="brand-title"></strong>
+    <span>Concept explanation</span>
+  </div>
+  <div class="controls">
+    <span id="score" hidden></span>
+    <button id="quiz-reset" type="button" hidden>Reset quiz</button>
+    <button id="theme-toggle" type="button">Dark theme</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="toc" hidden>
+    <div class="toc-title">Contents</div>
+    <nav><ul id="toc-list"></ul></nav>
+  </aside>
+  <article id="content"></article>
+</div>
+
+<details id="toc-details" hidden>
+  <summary>Contents</summary>
+  <nav><ul id="toc-list-mobile"></ul></nav>
+</details>
+
+<script>
+window.PAGE = {"title":"Search & Discovery Architecture","slug":"search-discovery-architecture","description":"How a small full-stack search app turns free text into ranked, live-enriched results, one inverted-index lookup at a time.","markdown":"## Background\n\n### The deep background (skippable)\n\nPicture the search box on a food and goods delivery app. A customer types\n\"trail running shoe\" and expects, within a few hundred milliseconds, a ranked list of items.\nBehind that box sit a handful of jobs that look simple only until you try to do them well:\n\n- **Matching.** The words the customer types must be matched against every item, without\n  scanning the whole catalogue on every keystroke.\n- **Ranking.** A match on the item's *name* should count for more than a match in a tag or\n  a category.\n- **Enrichment.** The price shown should be the live price, not a stale one, and the item\n  should say whether it is actually in stock and when it will arrive.\n- **Resilience.** A third party that occasionally fails or hangs must never take down the\n  whole results page.\n\n> [!definition] Catalog\n> The set of items a customer can discover and order: names, categories, descriptive tags,\n> a base price, and a base popularity score. In this app it is a single JSON file with 36\n> items across 5 categories.\n\nThese are the same problems every search product faces, from a corner shop to a global\nmarketplace. The interesting part is how much of it falls out of two simple ideas: an\n**inverted index** for matching, and **enrich only what you show** for live data.\n\n### The narrow background: this app\n\nThis page explains one concrete implementation of that problem: a small full-stack demo app\nbuilt as a timeboxed exercise. Its pieces:\n\n- **Server**: Node.js 24, Express 5, TypeScript in strict mode. In-memory data only.\n- **Client**: a hand-rolled vanilla TypeScript single-page app, no framework. Vite serves it\n  in development and builds it in production.\n- **Shared contract**: one TypeScript file imported by both sides, so request and response\n  shapes cannot drift apart.\n- **Simulated upstream**: an in-process stand-in for the real availability/pricing provider.\n  It sleeps 80 to 400 ms and fails about 8% of the time, per item.\n\nThe architecture in one picture:\n\n```mermaid\nflowchart LR\n  Client[\"Vanilla TS SPA\"] -->|\"GET /api/search?q=trail\"| API[\"Express 5 API\"]\n  API --> Index[(\"Inverted index\")]\n  API --> Catalog[(\"Catalog JSON (36 items)\")]\n  API -->|\"enrich current page\"| Upstream[[\"Simulated upstream\"]]\n  Upstream -->|\"price, availability, delivery\"| API\n  API -->|\"items, total, page\"| Client\n\n  classDef client fill:#87CEEB,stroke:#333,stroke-width:2px,color:darkblue\n  classDef server fill:#90EE90,stroke:#333,stroke-width:2px,color:darkgreen\n  classDef datastore fill:#E6E6FA,stroke:#333,stroke-width:2px,color:darkblue\n  classDef external fill:#FFB6C1,stroke:#DC143C,stroke-width:2px,color:black\n\n  class Client client\n  class API server\n  class Index,Catalog datastore\n  class Upstream external\n```\n\nTwo things are worth noticing before we go deeper. First, the server holds the inverted index\nand the catalogue in memory, built once at startup. Second, the server only ever asks the\nupstream provider about the *current page* of results, never the whole catalogue.\n\n## Intuition\n\n### The back-of-the-book index\n\nAn inverted index is exactly what it sounds like: the index at the back of a book, turned\ninside out. A normal index lists terms and points at pages. Ours lists words and points at\nitems.\n\n> [!definition] Inverted index\n> A map from each word to the items that contain it, so answering \"which items mention\n> 'trail'?\" is a single lookup, not a scan of the whole catalogue. \"Inverted\" because it is\n> the reverse of the natural order (item contains word).\n\nStart with a toy catalogue of three items:\n\n| Item | Name               | Category | Tags               |\n| ---- | ------------------ | -------- | ------------------ |\n| i1   | Trail Running Shoe | Footwear | trail, lightweight |\n| i2   | Running Shorts     | Apparel  | breathable         |\n| i3   | Trail Backpack     | Outdoor  | trail, lightweight |\n\nThe index for the word \"trail\" says: i1 (it is in the name) and i3 (name, and also a tag).\nThe index for \"running\" says: i1 (name) and i2 (name). Draw that and it already looks like a\ntiny search engine:\n\n```mermaid\nflowchart LR\n  trail((\"trail\")) -->|\"i1, i3\"| i1[\"i1: Trail Running Shoe\"]\n  trail -->|\"i1, i3\"| i3[\"i3: Trail Backpack\"]\n  running((\"running\")) -->|\"i1, i2\"| i1\n  running -->|\"i1, i2\"| i2[\"i2: Running Shorts\"]\n\n  classDef token fill:#FFD700,stroke:#333,stroke-width:2px,color:black\n  classDef item fill:#90EE90,stroke:#333,stroke-width:2px,color:darkgreen\n\n  class trail,running token\n  class i1,i2,i3 item\n```\n\nNow the query \"trail running\" has two words. i1 is the only item that both words point at, so\nit should win. i2 and i3 each match one word, so they tie behind it. That is the whole of\nsearch in miniature: **an item's score is the sum of what each query word contributes, and\nwhat a word contributes depends on where it appeared.**\n\n### The request in one breath\n\nA search request walks a short pipeline. Each stage hands a smaller, more refined answer to\nthe next:\n\n```mermaid\nflowchart TD\n  Q([\"Query\"]) --> T[\"Tokenise\"]\n  T --> L{\"Exact key?\"}\n  L -->|\"yes\"| C[\"Sum weights per item\"]\n  L -->|\"no\"| PF[\"Prefix fallback\"]\n  PF --> C\n  C --> F[\"Filter by category\"]\n  F --> O[\"Sort: relevance, price, or popularity\"]\n  O --> P[\"Paginate\"]\n  P --> E[\"Enrich current page\"]\n  E --> R([\"Items + total\"])\n\n  classDef terminal fill:#90EE90,stroke:#333,stroke-width:2px,color:darkgreen\n  classDef decision fill:#FFD700,stroke:#333,stroke-width:2px,color:black\n  classDef process fill:#87CEEB,stroke:#333,stroke-width:2px,color:darkblue\n\n  class Q,R terminal\n  class L decision\n  class T,C,PF,F,O,P,E process\n```\n\nThe crucial ordering: everything before enrichment happens in memory, instantly, over the\nwhole catalogue. Only after pagination does the server ask the upstream provider for live\nprice, availability, and delivery, and it asks only for the twelve items on the current page.\nThat single ordering decision is the source of most of the app's elegance.\n\n## Details\n\n### Tokenising: one function, two jobs\n\nBefore any of this works, text has to become words. The app has one `tokenise()` function,\nused at index time on item text and at search time on the query. Running both sides through\nthe *same* function is what guarantees a query word can ever equal an index key.\n\n> [!definition] Tokenise\n> To split a string into searchable words (\"tokens\"), lower-casing, stripping accents,\n> replacing punctuation with spaces, and dropping stopwords and single characters.\n\nFor `\"Trail-Running Shoes, for the Win!\"` it returns `[\"trail\", \"running\", \"shoes\", \"win\"]`.\nThe order of operations matters more than it looks:\n\n1. Lower-case, so \"Trail\" and \"trail\" are the same word.\n2. Unicode-normalise (NFKD) and strip accent marks, so \"crème\" becomes \"creme\". This must\n   happen *before* punctuation is replaced, otherwise each accent mark would become a space\n   and split the word into \"cre me\".\n3. Replace anything that is not a letter or digit with a space, so \"moisture-wicking\" yields\n   \"moisture\" and \"wicking\".\n4. Drop single characters and stopwords (\"a\", \"an\", \"the\", \"and\", \"or\", \"for\", \"with\", \"of\"),\n   which match almost everything and add noise rather than signal.\n\n### The inverted index and field weights\n\nWhere a word appears says how strongly it describes an item. A word in the **name** beats the\n**category**, which beats a **tag**:\n\n```typescript\nconst FIELD_WEIGHT = { name: 3, category: 2, tag: 1 } as const;\n\ntype InvertedIndex = Map\u003cstring, Map\u003cstring, number>>; // token -> (itemId -> field weight)\n```\n\nFor each item, the builder tokenises the name, category, and every tag, and stores the word\nunder its field weight. The weight is stored at *build* time, so a query does nothing but\nlookups and additions. One subtlety:\n\n- If a word appears in both the name and a tag, it is stored **once, at the higher weight**\n  (`Math.max`), not twice. The tag does not add to the name's contribution. This is a design\n  choice: an item whose name contains \"trail\" should not get a bonus for also carrying a\n  \"trail\" tag.\n\nThe 36-item seed catalogue indexes down to 62 distinct words, which matters because it keeps\na later fallback cheap.\n\n### Scoring\n\nScoring answers one question: given a query, which items match, and in what order? Words are\nOR'd: an item's score is the sum of its best field weight for each distinct word it matches,\nso items that match more of the query rank higher.\n\nFor the toy catalogue, `\"trail running\"` finds these entries and scores:\n\n- `trail` → i1 at 3 (name), i3 at 3 (name)\n- `running` → i1 at 3 (name), i2 at 3 (name)\n- Totals: **i1 = 6**, i2 = 3, i3 = 3\n\ni1 wins because it is the only item both words describe.\n\n```mermaid\nflowchart LR\n  trail((\"trail\")) -->|\"3\"| i1[\"i1: Trail Running Shoe\"]\n  trail -->|\"3\"| i3[\"i3: Trail Backpack\"]\n  running((\"running\")) -->|\"3\"| i1\n  running -->|\"3\"| i2[\"i2: Running Shorts\"]\n\n  classDef token fill:#FFD700,stroke:#333,stroke-width:2px,color:black\n  classDef item fill:#90EE90,stroke:#333,stroke-width:2px,color:darkgreen\n\n  class trail,running token\n  class i1,i2,i3 item\n```\n\nFour behaviours stop the scorer from being fooled:\n\n- **Prefix fallback.** While the user is mid-word (\"runn\"), there is no exact key. The scorer\n  falls back to matching every key that *starts* with the typed word, so \"runn\" finds\n  \"running\". It is a linear scan over the keys, which is fine at 62 keys.\n- **Each key counts once.** A repeated word (\"trail trail\") is scored once, and a prefix word\n  skips keys another query word already matched, so \"runn running\" does not score \"running\"\n  twice. Longer words claim keys first, so the score does not depend on the order the user\n  typed them.\n- **No searchable words means \"no filter\", not \"no matches\".** A query that is empty, or only\n  stopwords and single letters (\"t\"), returns `null`, and the search behaves as if there were\n  no text filter at all. The first keystroke never flashes an empty state. A *real* query with\n  no matches returns an empty map, which does show the empty state.\n- **Ties keep catalogue order.** JavaScript's stable sort means equal scores fall back to the\n  order items were loaded, so the same query always paginates identically.\n\n> [!edge-case] Known limits, acceptable at this size\n> Query words are OR'd, not AND'd. Word forms are not matched: \"shoe\" reaches \"shoes\" only\n> through the prefix fallback, and \"shoes\" never matches \"shoe\". There is no stemming. All of\n> these are deliberate, documented trade-offs for a 36-item catalogue.\n\n### The pipeline after scoring\n\nWith scores in hand, `searchCatalog` runs filter, sort, and paginate, all in memory:\n\n- **Filter** keeps items that have a score (or all items when the query had no searchable\n  words), then applies the exact category match.\n- **Sort** picks one of three comparators: relevance (highest score first), price (cheapest\n  `basePrice` first), or popularity (highest `basePopularity` first).\n- **Paginate** clamps the requested page to the last page rather than returning an empty one,\n  so a stale `?page=9` link still shows results.\n\nOnly the returned slice is handed to enrichment. That is the whole trick behind the price sort:\n\n> [!important] Sort by `basePrice`, not the live price\n> The live price only exists after the upstream provider answers, and only the current page\n> is ever enriched. So sorting by live price would force enriching the *entire* catalogue.\n> Instead, price sort uses `basePrice`, which is known without any upstream call. The displayed\n> live price can therefore differ slightly from the sort order, a documented trade-off, not a bug.\n\n### Server design choices\n\nA few decisions on the server are worth singling out, because each one converts a vague\n\"handle errors well\" into a concrete mechanism:\n\n- **Validate once at the boundary.** `parseSearchParams` turns untrusted query strings into a\n  typed `SearchParams` and throws a `400 BAD_REQUEST` on anything malformed (an unknown sort,\n  a `page` that is not a positive integer, a repeated parameter). Everything downstream can\n  trust the shape. A repeated key like `?sort=a&sort=b` is caught explicitly, because\n  Express's query parser turns it into an array.\n- **One error path.** A single `AppError` class and one error-handling middleware produce one\n  JSON `ApiError` shape for every failure. Unexpected errors are logged and returned as a\n  generic `500 INTERNAL_ERROR`, never leaking internals.\n- **Enrich the page in parallel, degrade per item.** All upstream calls for a page start at\n  once, so a page costs its *slowest* item, not the sum. Each call catches its own failure, so\n  a failing provider degrades that one item (`enrichmentFailed: true`, null live fields) and\n  never fails the whole search.\n- **A hard time budget.** A single `AbortSignal.any([timeout, disconnected])` caps the whole\n  page's enrichment at 3 seconds. Anything still slow by then is returned degraded.\n- **Cancellation runs end to end.** When the client aborts (the user kept typing), the server\n  notices the response closed early and aborts its own upstream signal, which rejects the\n  simulated fetch. A request nobody will read stops costing work at every layer.\n- **Instrumentation without a dependency.** A hand-rolled middleware counts requests per route\n  and logs one line each, `GET /api/metrics` returns the counters, and `GET /api/search` sends\n  a `Server-Timing` header splitting catalog search from upstream enrichment.\n\n### Frontend design choices\n\nThe client is a hand-rolled vanilla TypeScript single-page app, so each of these is a\ndeliberate substitute for something a framework would normally give you:\n\n- **A `Result\u003cT>` instead of exceptions.** `apiFetch` returns `{ ok: true, data }` or\n  `{ ok: false, error }`, so expected failures are data the caller must branch on. Only a\n  deliberate abort still throws, and callers swallow that one case.\n- **One shared type, a discriminated union.** `EnrichedItem` is `CatalogItem` plus either a\n  successful shape (live fields present) or a failed shape (all three live fields null), tagged\n  by `enrichmentFailed`. One check narrows all three fields at once, and impossible states\n  (a price alongside `enrichmentFailed: true`) do not type-check.\n- **Keyed diffing and View Transitions.** The results list matches cards to items by id,\n  updating and moving surviving cards rather than rebuilding them. New items create DOM, gone\n  items remove it, and the whole update runs inside `document.startViewTransition` for a\n  cross-fade. This is the job a framework's virtual DOM \"key\" prop does, in a few lines.\n- **One source of truth, mirrored to the URL.** A single `state` object drives the screen.\n  Discrete choices (Enter, filter, sort, page) push a history entry so Back undoes them;\n  typing *replaces* the current entry so each debounced keystroke is not a Back step. Back and\n  Forward read state back out of the URL.\n- **Stale responses cannot win.** Each search aborts the previous `AbortController`, and a\n  monotonically increasing `generation` counter drops any response that still arrives late, so\n  only the latest search ever renders.\n- **Typeahead, cheap by design.** `GET /api/suggestions` reuses the same index and scoring but\n  never calls the upstream provider, so it is cheap enough to fetch on every debounce tick.\n  The client adds a 200 ms debounce, a two-character minimum, a per-query memo, and aborting\n  of stale requests. The listbox is wired with `aria-controls` and `aria-activedescendant`\n  for assistive tech, and `mousedown` is cancelled so a scrollbar drag cannot blur the input\n  and close the list.\n\n## Quiz\n\n\u003cdiv class=\"quiz\" data-quiz=\"0\">\u003c/div>\n\u003cdiv class=\"quiz\" data-quiz=\"1\">\u003c/div>\n\u003cdiv class=\"quiz\" data-quiz=\"2\">\u003c/div>\n\u003cdiv class=\"quiz\" data-quiz=\"3\">\u003c/div>\n\u003cdiv class=\"quiz\" data-quiz=\"4\">\u003c/div>\n","quizzes":[{"question":"An item's name and one of its tags both contain the word \"trail\". What does \"trail\" contribute\nto that item's score?","options":[{"text":"4, the sum of the name and tag weights","correct":false,"feedback":"Math.max keeps the higher weight instead of adding them, so a name match is not padded by a\nmatching tag."},{"text":"3, the name's weight only","correct":true,"feedback":"A word is stored once per item at its strongest field weight. The tag's weight of 1 is\ndiscarded, not added."},{"text":"1, the tag's weight only","correct":false,"feedback":"The tag weight would only apply if the word appeared nowhere stronger. Here the name has it."},{"text":"0, because the duplicate cancels out","correct":false,"feedback":"Duplicates do not cancel; they collapse to the strongest single weight."}]},{"question":"The user has typed \"runn\", and no index key is exactly \"runn\". What happens?","options":[{"text":"Nothing matches, and the empty state shows","correct":false,"feedback":"That would be true only if the prefix fallback did not exist."},{"text":"Every key starting with \"runn\" (such as \"running\") matches, at that key's weight","correct":true,"feedback":"When a query word has no exact key, the scorer scans the index for keys that start with it,\nso partial words match while the user is still typing."},{"text":"Only items whose name is exactly \"runn\" match","correct":false,"feedback":"There are no exact \"runn\" keys; the fallback is what produces matches."},{"text":"The query is treated as having no searchable words","correct":false,"feedback":"An empty or stopword-only query behaves that way. \"runn\" is a real word that triggers the\nprefix fallback."}]},{"question":"Why does price sort use `basePrice` rather than the live enriched price?","options":[{"text":"Live prices are random, so sorting by them would be non-deterministic","correct":false,"feedback":"Live prices vary, but the real reason is about which items get enriched."},{"text":"Only the current page is enriched, so live prices for the rest of the catalogue do not exist","correct":true,"feedback":"Enrichment happens after pagination and touches only the current page. Sorting by live price\nwould force enriching everything first."},{"text":"basePrice is always cheaper, so results look more attractive","correct":false,"feedback":"basePrice is the reference price, not a discount. This is not about attractiveness."},{"text":"The upstream provider charges per call, so fewer calls is cheaper","correct":false,"feedback":"Call volume is part of the design, but the decisive constraint is that live prices are not\nknown for unenriched items."}]},{"question":"An upstream provider call for one item fails (an 8% chance per item). What does the user see?","options":[{"text":"The whole search fails with a 502 error","correct":false,"feedback":"A failing upstream call is absorbed per item; it never fails the whole search."},{"text":"That item still appears, marked degraded with \"Price unavailable\", while the rest of the list is normal","correct":true,"feedback":"The item returns with enrichmentFailed: true and null live fields, and the card renders a\ndegraded state. The rest of the page is unaffected."},{"text":"The item is silently dropped from the results","correct":false,"feedback":"Dropping items would hide stock that exists; the design keeps them visible but flagged."},{"text":"The page retries the failed item until it succeeds","correct":false,"feedback":"There is one attempt per item within the page's 3-second budget, then it degrades."}]},{"question":"A user types quickly, starting a new search before an older, slower response arrives. What\nguarantees the stale response never overwrites the newer results?","options":[{"text":"The AbortController alone","correct":false,"feedback":"Aborting cancels network work, but a response that had already resolved could still arrive\nlate. Abort is necessary, not sufficient."},{"text":"The 200 ms debounce","correct":false,"feedback":"Debounce reduces the number of searches; it does not decide which response wins."},{"text":"The generation counter","correct":true,"feedback":"Each search increments a counter and captures its value; a response is rendered only if its\ngeneration is still the latest."},{"text":"The per-query suggestion memo","correct":false,"feedback":"The memo caches typeahead answers and is unrelated to which search response renders."}]}]};
+</script>
+<script>
+(() => {
+  const page = window.PAGE;
+  const $ = (id) => document.getElementById(id);
+  const THEME_KEY = "explain-theme";
+  let theme = document.documentElement.dataset.theme;
+  let mermaidId = 0;
+  let allFigures = [];
+
+  $("brand-title").textContent = page.title;
+  document.title = page.title + " — an explanation";
+
+  const content = $("content");
+  const h1 = document.createElement("h1");
+  h1.className = "page-title";
+  h1.textContent = page.title;
+  content.append(h1);
+
+  if (page.description) {
+    const lead = document.createElement("p");
+    lead.className = "lead";
+    lead.textContent = page.description;
+    content.append(lead);
+  }
+
+  const body = document.createElement("div");
+  body.className = "prose";
+  body.innerHTML = marked.parse(page.markdown, { gfm: true });
+  content.append(body);
+
+  wrapTables(body);
+  transformCallouts(body);
+  buildToc(body);
+  renderQuizzes(body);
+  highlightCode(body);
+  collectMermaid(body);
+
+  // --- tables: wrap so wide tables scroll instead of overflowing ------------
+  function wrapTables(root) {
+    for (const table of root.querySelectorAll("table")) {
+      const wrap = document.createElement("div");
+      wrap.className = "table-wrap";
+      table.replaceWith(wrap);
+      wrap.append(table);
+    }
+  }
+
+  // --- callouts: GitHub-style alert blockquotes -> .callout -----------------
+  const CALLOUT_DEFAULT_TITLES = {
+    note: "Note",
+    tip: "Tip",
+    important: "Important",
+    warning: "Warning",
+    caution: "Caution",
+    definition: "Definition",
+    example: "Example",
+    "edge-case": "Edge case",
+  };
+
+  function transformCallouts(root) {
+    for (const bq of [...root.querySelectorAll("blockquote")]) {
+      const first = bq.firstElementChild;
+      if (!first || first.tagName !== "P") continue;
+      const text = first.textContent;
+      const m = text.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DEFINITION|EXAMPLE|EDGE-CASE)\]\s*([\s\S]*)$/i);
+      if (!m) continue;
+      const type = m[1].toLowerCase();
+      const title = m[2].trim() || CALLOUT_DEFAULT_TITLES[type] || "Note";
+      first.remove();
+
+      const aside = document.createElement("aside");
+      aside.className = "callout callout-" + type;
+      const t = document.createElement("div");
+      t.className = "callout-title";
+      t.textContent = title;
+      aside.append(t);
+      while (bq.firstChild) aside.append(bq.firstChild);
+      bq.replaceWith(aside);
+    }
+  }
+
+  // --- table of contents from h2/h3 -----------------------------------------
+  function slugifyHeading(text, used) {
+    const base = text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "section";
+    let id = base;
+    let n = 2;
+    while (used[id]) id = base + "-" + n++;
+    used[id] = true;
+    return id;
+  }
+
+  function buildToc(root) {
+    const headings = [...root.querySelectorAll("h2, h3")];
+    const asideList = $("toc-list");
+    const mobileList = $("toc-list-mobile");
+    asideList.replaceChildren();
+    mobileList.replaceChildren();
+    const used = {};
+    const items = [];
+    for (const h of headings) {
+      h.id = slugifyHeading(h.textContent, used);
+      const li = document.createElement("li");
+      li.className = "toc-" + h.tagName.toLowerCase();
+      const a = document.createElement("a");
+      a.href = "#" + h.id;
+      a.textContent = h.textContent;
+      li.append(a);
+      items.push(li);
+    }
+    asideList.append(...items.map((li) => li.cloneNode(true)));
+    mobileList.append(...items);
+    const has = headings.length > 0;
+    $("toc").hidden = !has;
+    $("toc-details").hidden = !has;
+    observeSections(headings);
+  }
+
+  function observeSections(headings) {
+    if (!("IntersectionObserver" in window)) return;
+    const links = [...document.querySelectorAll("#toc a, #toc-details a")];
+    const byId = {};
+    for (const a of links) byId[a.getAttribute("href").slice(1)] = a;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          for (const a of links) a.classList.remove("active");
+          const active = byId[entry.target.id];
+          if (active) active.classList.add("active");
+        }
+      },
+      { rootMargin: "-10% 0px -80% 0px" }
+    );
+    headings.forEach((h) => observer.observe(h));
+  }
+
+  // --- quiz ------------------------------------------------------------------
+  function renderQuizzes(root) {
+    for (const ph of [...root.querySelectorAll(".quiz")]) {
+      const idx = Number(ph.dataset.quiz);
+      const q = page.quizzes[idx];
+      if (!q) {
+        ph.remove();
+        continue;
+      }
+      ph.replaceWith(quizCard(q, idx));
+    }
+    updateScore();
+  }
+
+  function quizCard(q, idx) {
+    const card = document.createElement("div");
+    card.className = "quiz-card";
+    card.dataset.answered = "false";
+    card.dataset.correctIndex = String(q.options.findIndex((o) => o.correct));
+
+    const head = document.createElement("div");
+    head.className = "quiz-q";
+    const num = document.createElement("span");
+    num.className = "quiz-num";
+    num.textContent = "Q" + (idx + 1);
+    const qt = document.createElement("span");
+    qt.className = "quiz-text";
+    qt.textContent = q.question;
+    head.append(num, qt);
+
+    const list = document.createElement("ul");
+    list.className = "quiz-options";
+    q.options.forEach((opt, oi) => {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = opt.text;
+      btn.addEventListener("click", () => answer(card, q, oi));
+      li.append(btn);
+      list.append(li);
+    });
+
+    const feedback = document.createElement("div");
+    feedback.className = "quiz-feedback";
+    feedback.dataset.role = "picked";
+    feedback.hidden = true;
+    const correctFeedback = document.createElement("div");
+    correctFeedback.className = "quiz-feedback is-correct";
+    correctFeedback.dataset.role = "correct";
+    correctFeedback.hidden = true;
+
+    card.append(head, list, feedback, correctFeedback);
+    return card;
+  }
+
+  function answer(card, q, oi) {
+    if (card.dataset.answered === "true") return;
+    card.dataset.answered = "true";
+    card.dataset.picked = String(oi);
+    const opt = q.options[oi];
+    const correctIdx = Number(card.dataset.correctIndex);
+    const buttons = card.querySelectorAll(".quiz-options button");
+    buttons.forEach((btn, i) => {
+      btn.disabled = true;
+      if (i === correctIdx) btn.classList.add("is-correct");
+      else if (i === oi) btn.classList.add("is-wrong");
+    });
+
+    const feedback = card.querySelector(".quiz-feedback[data-role='picked']");
+    feedback.hidden = false;
+    feedback.className = "quiz-feedback " + (opt.correct ? "is-correct" : "is-wrong");
+    const label = document.createElement("span");
+    label.className = "fb-label";
+    label.textContent = opt.correct ? "Correct. " : "Not quite. ";
+    feedback.replaceChildren(label);
+    feedback.append(document.createTextNode(opt.feedback || (opt.correct ? "That is the right idea." : "")));
+
+    if (!opt.correct) {
+      const cfb = card.querySelector(".quiz-feedback[data-role='correct']");
+      cfb.hidden = false;
+      const correct = q.options[correctIdx];
+      const clabel = document.createElement("span");
+      clabel.className = "fb-label";
+      clabel.textContent = "Correct answer: ";
+      cfb.replaceChildren(clabel);
+      cfb.append(document.createTextNode(correct.text));
+      if (correct.feedback) {
+        cfb.append(document.createElement("br"));
+        cfb.append(document.createTextNode(correct.feedback));
+      }
+    }
+    updateScore();
+  }
+
+  function updateScore() {
+    const cards = [...document.querySelectorAll(".quiz-card")];
+    let answered = 0;
+    let correct = 0;
+    for (const c of cards) {
+      if (c.dataset.answered !== "true") continue;
+      answered++;
+      if (c.dataset.picked === c.dataset.correctIndex) correct++;
+    }
+    const score = $("score");
+    const reset = $("quiz-reset");
+    if (cards.length) {
+      score.hidden = false;
+      reset.hidden = false;
+      score.textContent = "Score: " + correct + " / " + cards.length;
+    } else {
+      score.hidden = true;
+      reset.hidden = true;
+    }
+  }
+
+  $("quiz-reset").addEventListener("click", () => {
+    for (const card of document.querySelectorAll(".quiz-card")) {
+      card.dataset.answered = "false";
+      for (const btn of card.querySelectorAll(".quiz-options button")) {
+        btn.disabled = false;
+        btn.classList.remove("is-correct", "is-wrong");
+      }
+      for (const fb of card.querySelectorAll(".quiz-feedback")) {
+        fb.hidden = true;
+        if (fb.dataset.role === "picked") fb.className = "quiz-feedback";
+      }
+    }
+    updateScore();
+  });
+
+  // --- code + mermaid ---------------------------------------------------------
+  function highlightCode(root) {
+    if (!window.hljs) return;
+    for (const block of root.querySelectorAll("pre > code:not(.language-mermaid)")) {
+      hljs.highlightElement(block);
+    }
+  }
+
+  function collectMermaid(root) {
+    allFigures = [...root.querySelectorAll("pre > code.language-mermaid")].map((block) => {
+      const figure = document.createElement("div");
+      figure.className = "mermaid";
+      figure.dataset.state = "pending";
+      block.parentElement.replaceWith(figure);
+      return { figure, source: block.textContent };
+    });
+    renderAllMermaid();
+  }
+
+  async function renderAllMermaid() {
+    if (allFigures.length === 0) return;
+    if (!window.mermaid) {
+      for (const { figure, source } of allFigures) showDiagramError(figure, source, "Mermaid did not load");
+      return;
+    }
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: theme === "dark" ? "dark" : "neutral",
+    });
+    for (const { figure, source } of allFigures) await renderFigure(figure, source);
+  }
+
+  async function renderFigure(figure, source) {
+    const id = "explain-diagram-" + ++mermaidId;
+    figure.innerHTML = "";
+    figure.dataset.state = "pending";
+    try {
+      const { svg } = await mermaid.render(id, source);
+      figure.innerHTML = svg;
+      figure.dataset.state = "rendered";
+    } catch (error) {
+      const errEl = document.getElementById("d" + id);
+      if (errEl) errEl.remove();
+      showDiagramError(figure, source, error && error.message ? error.message : String(error));
+    }
+  }
+
+  function showDiagramError(figure, source, message) {
+    figure.dataset.state = "error";
+    const note = document.createElement("p");
+    note.textContent = "Diagram failed to render: " + message;
+    const pre = document.createElement("pre");
+    pre.textContent = source;
+    figure.replaceChildren(note, pre);
+    console.error("Mermaid diagram failed:", message);
+  }
+
+  // --- theme ------------------------------------------------------------------
+  function updateThemeButton() {
+    $("theme-toggle").textContent = theme === "dark" ? "Light theme" : "Dark theme";
+  }
+
+  $("theme-toggle").addEventListener("click", () => {
+    theme = theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem(THEME_KEY, theme); } catch {}
+    updateThemeButton();
+    renderAllMermaid();
+  });
+
+  updateThemeButton();
+
+  // Audit hook for --check-render (harmless in normal use).
+  window.__EXPLAIN__ = {};
+})();
+
+</script>
+</body>
+</html>
