@@ -6,6 +6,17 @@ See `requirements.md` for the brief and `SOLUTION.md` for design decisions and t
 Full architecture, domain model, API contract, and decision records live in the
 [OKF knowledge bundle](okf/index.md), browsable with `npm run okf:view`.
 
+## Screenshots
+
+Typeahead suggestions while typing, with ranked results underneath. The highlighted card is an
+item whose live pricing call failed: it still shows, marked "Price unavailable".
+
+![Typing "tra" shows trail shoe suggestions above ranked results, one marked Price unavailable](docs/screenshots/catalog-typeahead.png)
+
+Filtered to Footwear and sorted by price, with live price, stock and delivery estimates:
+
+![Footwear results sorted by price, each with live price, availability and delivery estimate](docs/screenshots/catalog-results.png)
+
 ## Stack
 
 TypeScript (strict), Node.js 24, Express 5, a hand-rolled vanilla TS client (no framework), Vite, Vitest, Playwright. See `AGENTS.md` for the full rundown.
